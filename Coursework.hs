@@ -123,18 +123,17 @@ sub (a, t) (At x)
   | otherwise = At x
 
 subs :: [Sub] -> Type -> Type
-subs xs t = subs2 (reverseList xs) t
-
-subs2 :: [Sub] -> Type -> Type
-subs2 [] t = t
-subs2 (x : xs) t = subs2 xs (sub x t)
-
-reverseList :: [Sub] -> [Sub]
-reverseList = rev []
+subs xs = subAtoms (reverseList xs)
   where
-    rev :: [Sub] -> [Sub] -> [Sub]
-    rev xs [] = xs
-    rev xs (y : ys) = rev (y : xs) ys
+    subAtoms :: [Sub] -> Type -> Type
+    subAtoms [] t = t
+    subAtoms (x : xs) t = subAtoms xs (sub x t)
+    reverseList :: [Sub] -> [Sub]
+    reverseList = rev []
+      where
+        rev :: [Sub] -> [Sub] -> [Sub]
+        rev xs [] = xs
+        rev xs (y : ys) = rev (y : xs) ys
 
 ------------------------- Unification
 
