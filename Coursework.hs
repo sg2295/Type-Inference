@@ -122,18 +122,21 @@ sub (a, t) (At x)
   | a == x = t
   | otherwise = At x
 
+-- subs :: [Sub] -> Type -> Type
+-- subs xs = subAtoms (reverseList xs)
+--   where
+--     subAtoms :: [Sub] -> Type -> Type
+--     subAtoms [] t = t
+--     subAtoms (x : xs) t = subAtoms xs (sub x t)
+--     reverseList :: [Sub] -> [Sub]
+--     reverseList = rev []
+--     rev :: [Sub] -> [Sub] -> [Sub]
+--     rev xs [] = xs
+--     rev xs (y : ys) = rev (y : xs) ys
+
 subs :: [Sub] -> Type -> Type
-subs xs = subAtoms (reverseList xs)
-  where
-    subAtoms :: [Sub] -> Type -> Type
-    subAtoms [] t = t
-    subAtoms (x : xs) t = subAtoms xs (sub x t)
-    reverseList :: [Sub] -> [Sub]
-    reverseList = rev []
-      where
-        rev :: [Sub] -> [Sub] -> [Sub]
-        rev xs [] = xs
-        rev xs (y : ys) = rev (y : xs) ys
+subs [] t = t
+subs (x : xs) t = sub x (subs xs t)
 
 ------------------------- Unification
 
@@ -159,7 +162,8 @@ st1 = ([], [u1, u2])
 ------------------------- Assignment 3
 
 sub_u :: Sub -> [Upair] -> [Upair]
-sub_u = undefined
+sub_u _ [] = []
+sub_u s ((t1, t2) : ts) = (sub s t1, sub s t2) : sub_u s ts
 
 step :: State -> State
 step = undefined
