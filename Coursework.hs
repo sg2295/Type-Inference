@@ -171,16 +171,13 @@ step (s, (At t1, At t2) : ts)
   | t1 == t2 = (s, ts)
   | otherwise = ((t1, At t2) : s, sub_u (t1, At t2) ts)
 step (s, (At t1, t2) : ts)
-  | occurs t1 t2 = error ("Atom " ++ t1 ++ " occurs in " ++ show t2)
+  | occurs t1 t2 = error ("Step: atom " ++ t1 ++ " occurs in " ++ show t2)
   | otherwise = ((t1, t2) : s, sub_u (t1, t2) ts)
 step (s, (t1, At t2) : ts)
-  | occurs t2 t1 = error ("Atom " ++ t2 ++ " occurs in " ++ show t1)
+  | occurs t2 t1 = error ("Step: atom " ++ t2 ++ " occurs in " ++ show t1)
   | otherwise = ((t2, t1) : s, sub_u (t2, t1) ts)
 step (s, (s1 :-> s2, t1 :-> t2) : ts) = (s, (s1, t1) : (s2, t2) : ts)
 
--- State = ([Sub], [Upair])
--- Sub = (Atom, Type)
--- Upair = (Type, Type)
 unify :: [Upair] -> [Sub]
 unify u = unifyHelper ([], u)
 
@@ -217,6 +214,11 @@ d2 = Application ([("y",At "b")],Apply (Lambda "x" (Apply (Variable "x") (Variab
          Axiom ([("z",At "i"),("y",At "b")],Variable "z",At "j")
      ) )
 -}
+
+-- Type definitions:
+-- State = ([Sub], [Upair])
+-- Sub = (Atom, Type)
+-- Upair = (Type, Type)
 
 conclusion :: Derivation -> Judgement
 conclusion = undefined
