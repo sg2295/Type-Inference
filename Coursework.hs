@@ -180,103 +180,125 @@ step (s, (s1 :-> s2, t1 :-> t2) : ts) = (s, (s1, t1) : (s2, t2) : ts)
 
 unify :: [Upair] -> [Sub]
 unify u = unifyHelper ([], u)
-
-unifyHelper :: State -> [Sub]
-unifyHelper (s, []) = s
-unifyHelper state = unifyHelper (step state)
+  where
+    unifyHelper :: State -> [Sub]
+    unifyHelper (s, []) = s
+    unifyHelper state = unifyHelper (step state)
 
 ------------------------- Assignment 4
 
-type Context = ()
+type Context = [(Var, Type)]
 
-type Judgement = ()
+type Judgement = (Context, Term, Type)
 
 data Derivation
+  = Axiom Judgement
+  | Abstraction Judgement Derivation
+  | Application Judgement Derivation Derivation
+  deriving (Eq)
 
 n1 = Apply (Lambda "x" (Variable "x")) (Variable "y")
 
-{-
-d1 = Application ([("y",At "a")], n1 , At "a") (
-       Abstraction ([("y",At "a")],Lambda "x" (Variable "x"),At "a" :-> At "a") (
-         Axiom ([("x",At "a"),("y",At "a")],Variable "x",At "a")
-     ) ) (
-       Axiom ([("y",At "a")], Variable "y", At "a")
-     )
+d1 =
+  Application
+    ([("y", At "a")], n1, At "a")
+    ( Abstraction
+        ([("y", At "a")], Lambda "x" (Variable "x"), At "a" :-> At "a")
+        ( Axiom ([("x", At "a"), ("y", At "a")], Variable "x", At "a")
+        )
+    )
+    ( Axiom ([("y", At "a")], Variable "y", At "a")
+    )
 
-d2 = Application ([("y",At "b")],Apply (Lambda "x" (Apply (Variable "x") (Variable "y"))) (Lambda "z" (Variable "z")),At "a") (
-       Abstraction ([("y",At "b")],Lambda "x" (Apply (Variable "x") (Variable "y")),At "c") (
-         Application ([("x",At "d"),("y",At "b")],Apply (Variable "x") (Variable "y"),At "e") (
-           Axiom ([("x",At "d"),("y",At "b")],Variable "x",At "f")
-         ) (
-           Axiom ([("x",At "d"),("y",At "b")],Variable "y",At "g")
-     ) ) ) (
-       Abstraction ([("y",At "b")],Lambda "z" (Variable "z"),At "h") (
-         Axiom ([("z",At "i"),("y",At "b")],Variable "z",At "j")
-     ) )
--}
+d2 =
+  Application
+    ([("y", At "b")], Apply (Lambda "x" (Apply (Variable "x") (Variable "y"))) (Lambda "z" (Variable "z")), At "a")
+    ( Abstraction
+        ([("y", At "b")], Lambda "x" (Apply (Variable "x") (Variable "y")), At "c")
+        ( Application
+            ([("x", At "d"), ("y", At "b")], Apply (Variable "x") (Variable "y"), At "e")
+            ( Axiom ([("x", At "d"), ("y", At "b")], Variable "x", At "f")
+            )
+            ( Axiom ([("x", At "d"), ("y", At "b")], Variable "y", At "g")
+            )
+        )
+    )
+    ( Abstraction
+        ([("y", At "b")], Lambda "z" (Variable "z"), At "h")
+        ( Axiom ([("z", At "i"), ("y", At "b")], Variable "z", At "j")
+        )
+    )
 
 -- Type definitions:
 -- State = ([Sub], [Upair])
 -- Sub = (Atom, Type)
 -- Upair = (Type, Type)
-
+-- New:
+-- type Context = [(Var, Type)]
+-- type Judgement = (Context, Term, Type)
+-- data Derivation
+--   = Axiom Judgement
+--   | Abstraction Judgement Derivation
+--   | Application Judgement Derivation Derivation
 conclusion :: Derivation -> Judgement
-conclusion = undefined
+conclusion (Axiom j) = j
+conclusion (Abstraction j _) = j
+conclusion (Application j _ _) = j
 
 subs_ctx :: [Sub] -> Context -> Context
-subs_ctx = undefined
+subs_ctx _ [] = []
+subs_ctx s ((v, t) : ts) = (v, subs s t) : subs_ctx s ts
 
 subs_jdg :: [Sub] -> Judgement -> Judgement
-subs_jdg = undefined
+subs_jdg s (c, te, t) = (subs_ctx s c, te, subs s t)
 
 subs_der :: [Sub] -> Derivation -> Derivation
-subs_der = undefined
+subs_der s (Axiom j) = Axiom (subs_jdg s j)
+subs_der s (Abstraction j d) = (Abstraction (subs_jdg s j) (subs_der s d))
+subs_der s (Application j d1 d2) = (Application (subs_jdg s j) (subs_der s d1) (subs_der s d2))
 
 ------------------------- Typesetting derivations
 
-{-
 instance Show Derivation where
   show d = unlines (reverse strs)
     where
-      (_,_,_,strs) = showD d
+      (_, _, _, strs) = showD d
 
       showC :: Context -> String
       showC [] = []
-      showC [(x,t)]    = x ++ ": " ++ show t
-      showC ((x,t):cx) = x ++ ": " ++ show t  ++ " , " ++ showC cx
+      showC [(x, t)] = x ++ ": " ++ show t
+      showC ((x, t) : cx) = x ++ ": " ++ show t ++ " , " ++ showC cx
 
       showJ :: Judgement -> String
-      showJ ([],n,t) =              "|- " ++ show n ++ " : " ++ show t
-      showJ (cx,n,t) = showC cx ++ " |- " ++ show n ++ " : " ++ show t
+      showJ ([], n, t) = "|- " ++ show n ++ " : " ++ show t
+      showJ (cx, n, t) = showC cx ++ " |- " ++ show n ++ " : " ++ show t
 
       showL :: Int -> Int -> Int -> String
       showL l m r = replicate l ' ' ++ replicate m '-' ++ replicate r ' '
 
-      showD :: Derivation -> (Int,Int,Int,[String])
-      showD (Axiom j) = (0,k,0,[s,showL 0 k 0]) where s = showJ j; k = length s
-      showD (Abstraction j d)   = addrule (showJ j) (showD d)
+      showD :: Derivation -> (Int, Int, Int, [String])
+      showD (Axiom j) = (0, k, 0, [s, showL 0 k 0]) where s = showJ j; k = length s
+      showD (Abstraction j d) = addrule (showJ j) (showD d)
       showD (Application j d e) = addrule (showJ j) (sidebyside (showD d) (showD e))
 
-      addrule :: String -> (Int,Int,Int,[String]) -> (Int,Int,Int,[String])
-      addrule x (l,m,r,xs)
-        | k <= m     = (ll,k,rr, (replicate ll ' ' ++ x ++ replicate rr ' ') : showL  l m r  : xs)
-        | k <= l+m+r = (ll,k,rr, (replicate ll ' ' ++ x ++ replicate rr ' ') : showL ll k rr : xs)
-        | otherwise  = (0,k,0, x : replicate k '-' : [ replicate (-ll) ' ' ++ y ++ replicate (-rr) ' ' | y <- xs])
+      addrule :: String -> (Int, Int, Int, [String]) -> (Int, Int, Int, [String])
+      addrule x (l, m, r, xs)
+        | k <= m = (ll, k, rr, (replicate ll ' ' ++ x ++ replicate rr ' ') : showL l m r : xs)
+        | k <= l + m + r = (ll, k, rr, (replicate ll ' ' ++ x ++ replicate rr ' ') : showL ll k rr : xs)
+        | otherwise = (0, k, 0, x : replicate k '-' : [replicate (- ll) ' ' ++ y ++ replicate (- rr) ' ' | y <- xs])
         where
           k = length x
           i = div (m - k) 2
-          ll = l+i
-          rr = r+m-k-i
+          ll = l + i
+          rr = r + m - k - i
 
       extend :: Int -> [String] -> [String]
       extend i strs = strs ++ repeat (replicate i ' ')
 
-      sidebyside :: (Int,Int,Int,[String]) -> (Int,Int,Int,[String]) -> (Int,Int,Int,[String])
-      sidebyside (l1,m1,r1,d1) (l2,m2,r2,d2)
-        | length d1 > length d2 = ( l1 , m1+r1+2+l2+m2 , r2 , [ x ++ "  " ++ y | (x,y) <- zip d1 (extend (l2+m2+r2) d2)])
-        | otherwise             = ( l1 , m1+r1+2+l2+m2 , r2 , [ x ++ "  " ++ y | (x,y) <- zip (extend (l1+m1+r1) d1) d2])
-
--}
+      sidebyside :: (Int, Int, Int, [String]) -> (Int, Int, Int, [String]) -> (Int, Int, Int, [String])
+      sidebyside (l1, m1, r1, d1) (l2, m2, r2, d2)
+        | length d1 > length d2 = (l1, m1 + r1 + 2 + l2 + m2, r2, [x ++ "  " ++ y | (x, y) <- zip d1 (extend (l2 + m2 + r2) d2)])
+        | otherwise = (l1, m1 + r1 + 2 + l2 + m2, r2, [x ++ "  " ++ y | (x, y) <- zip (extend (l1 + m1 + r1) d1) d2])
 
 ------------------------- Assignment 5
 
