@@ -166,10 +166,27 @@ sub_u _ [] = []
 sub_u s ((t1, t2) : ts) = (sub s t1, sub s t2) : sub_u s ts
 
 step :: State -> State
-step = undefined
+step (s, []) = (s, [])
+step (s, (At t1, At t2) : ts)
+  | t1 == t2 = (s, ts)
+  | otherwise = ((t1, At t2) : s, sub_u (t1, At t2) ts)
+step (s, (At t1, t2) : ts)
+  | occurs t1 t2 = error ("Atom " ++ t1 ++ " occurs in " ++ show t2)
+  | otherwise = ((t1, t2) : s, sub_u (t1, t2) ts)
+step (s, (t1, At t2) : ts)
+  | occurs t2 t1 = error ("Atom " ++ t2 ++ " occurs in " ++ show t1)
+  | otherwise = ((t2, t1) : s, sub_u (t2, t1) ts)
+step (s, (s1 :-> s2, t1 :-> t2) : ts) = (s, (s1, t1) : (s2, t2) : ts)
 
+-- State = ([Sub], [Upair])
+-- Sub = (Atom, Type)
+-- Upair = (Type, Type)
 unify :: [Upair] -> [Sub]
-unify = undefined
+unify u = unifyHelper ([], u)
+
+unifyHelper :: State -> [Sub]
+unifyHelper (s, []) = s
+unifyHelper state = unifyHelper (step state)
 
 ------------------------- Assignment 4
 
