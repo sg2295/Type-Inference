@@ -254,8 +254,8 @@ subs_jdg s (c, te, t) = (subs_ctx s c, te, subs s t)
 
 subs_der :: [Sub] -> Derivation -> Derivation
 subs_der s (Axiom j) = Axiom (subs_jdg s j)
-subs_der s (Abstraction j d) = (Abstraction (subs_jdg s j) (subs_der s d))
-subs_der s (Application j d1 d2) = (Application (subs_jdg s j) (subs_der s d1) (subs_der s d2))
+subs_der s (Abstraction j d) = Abstraction (subs_jdg s j) (subs_der s d)
+subs_der s (Application j d1 d2) = Application (subs_jdg s j) (subs_der s d1) (subs_der s d2)
 
 ------------------------- Typesetting derivations
 
