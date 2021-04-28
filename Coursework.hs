@@ -229,17 +229,6 @@ d2 =
         )
     )
 
--- Type definitions:
--- State = ([Sub], [Upair])
--- Sub = (Atom, Type)
--- Upair = (Type, Type)
--- New:
--- type Context = [(Var, Type)]
--- type Judgement = (Context, Term, Type)
--- data Derivation
---   = Axiom Judgement
---   | Abstraction Judgement Derivation
---   | Application Judgement Derivation Derivation
 conclusion :: Derivation -> Judgement
 conclusion (Axiom j) = j
 conclusion (Abstraction j _) = j
@@ -302,11 +291,50 @@ instance Show Derivation where
 
 ------------------------- Assignment 5
 
+-- Type definitions:
+-- State = ([Sub], [Upair])
+-- Sub = (Atom, Type)
+-- Upair = (Type, Type)
+-- type Context = [(Var, Type)]
+-- type Judgement = (Context, Term, Type)
+-- data Derivation
+--   = Axiom Judgement
+--   | Abstraction Judgement Derivation
+--   | Application Judgement Derivation Derivation
+-- data Term
+--   = Variable Var = String
+--   | Lambda Var Term
+--   | Apply Term Term
+-- n1 = Apply (Lambda "x" (Variable "x")) (Variable "y")
+
+-- free :: Term -> [Var]
+-- free (Variable x) = [x]
+-- free (Lambda x n) = free n `minus` [x]
+-- free (Apply n m) = free n `merge` free m
+
+-- find :: (Show a, Eq a) => a -> [(a, b)] -> b
+-- find x [] = error ("find: " ++ show x ++ " not found")
+-- find x ((y, z) : zs)
+--   | x == y = z
+--   | otherwise = find x zs
+
 derive0 :: Term -> Derivation
-derive0 = undefined
+derive0 t = aux (getCon (free t), t, At "")
   where
+    getCon :: [Var] -> Context
+    getCon [] = []
+    getCon (v : vs) = (v, At "") : getCon vs
+    replace :: (Var, Type) -> Context -> Context
+    replace (v, t) [] = [(v, t)]
+    replace (v1, t1) ((v2, t2) : cs)
+      | v1 == v2 = (v1, t1) : cs
+      | otherwise = (v2, t2) : replace (v1, t1) cs
     aux :: Judgement -> Derivation
-    aux = undefined
+    aux (c, Variable v, At "") = Axiom (c, Variable v, At "")
+    aux (c, Lambda v t, At "")
+      | t == Variable v = Abstraction (c, Lambda v t, At "") (aux (replace (v, At "") c, t, At ""))
+      | otherwise = Abstraction (c, Lambda v t, At "") (aux ((v, At "") : c, t, At ""))
+    aux (c, Apply t1 t2, At "") = Application (c, Apply t1 t2, At "") (aux (c, t1, At "")) (aux (c, t2, At ""))
 
 derive1 :: Term -> Derivation
 derive1 = undefined
