@@ -85,7 +85,7 @@ occurs y (x :-> xs)
   | otherwise = occurs y xs
 occurs y (At x) = y == x
 
-findAtoms :: Type -> [Atom] -- filter function can be used instead TODO (in a single line)
+findAtoms :: Type -> [Atom]
 findAtoms xs = sortList (listAtoms xs [])
   where
     listAtoms :: Type -> [Atom] -> [Atom]
@@ -121,18 +121,6 @@ sub s (x :-> xs) = sub s x :-> sub s xs
 sub (a, t) (At x)
   | a == x = t
   | otherwise = At x
-
--- subs :: [Sub] -> Type -> Type
--- subs xs = subAtoms (reverseList xs)
---   where
---     subAtoms :: [Sub] -> Type -> Type
---     subAtoms [] t = t
---     subAtoms (x : xs) t = subAtoms xs (sub x t)
---     reverseList :: [Sub] -> [Sub]
---     reverseList = rev []
---     rev :: [Sub] -> [Sub] -> [Sub]
---     rev xs [] = xs
---     rev xs (y : ys) = rev (y : xs) ys
 
 subs :: [Sub] -> Type -> Type
 subs [] t = t
@@ -291,6 +279,25 @@ instance Show Derivation where
 
 ------------------------- Assignment 5
 
+update :: (Var, Type) -> Context -> Context
+update (v, t) [] = [(v, t)]
+update (v1, t1) ((v2, t2) : cs)
+  | v1 == v2 = (v1, t1) : cs
+  | otherwise = (v2, t2) : update (v1, t1) cs
+
+derive0 :: Term -> Derivation
+derive0 t = aux (getCon (free t), t, At "")
+  where
+    getCon :: [Var] -> Context -- Get the context of the term (Used once when aux is first called)
+    getCon [] = []
+    getCon (v : vs) = (v, At "") : getCon vs
+    aux :: Judgement -> Derivation
+    aux (c, Variable v, At "") = Axiom (c, Variable v, At "")
+    aux (c, Lambda v t, At "")
+      | t == Variable v = Abstraction (c, Lambda v t, At "") (aux (update (v, At "") c, t, At ""))
+      | otherwise = Abstraction (c, Lambda v t, At "") (aux ((v, At "") : c, t, At ""))
+    aux (c, Apply t1 t2, At "") = Application (c, Apply t1 t2, At "") (aux (c, t1, At "")) (aux (c, t2, At ""))
+
 -- Type definitions:
 -- State = ([Sub], [Upair])
 -- Sub = (Atom, Type)
@@ -317,24 +324,6 @@ instance Show Derivation where
 -- find x ((y, z) : zs)
 --   | x == y = z
 --   | otherwise = find x zs
-
-derive0 :: Term -> Derivation
-derive0 t = aux (getCon (free t), t, At "")
-  where
-    getCon :: [Var] -> Context
-    getCon [] = []
-    getCon (v : vs) = (v, At "") : getCon vs
-    replace :: (Var, Type) -> Context -> Context
-    replace (v, t) [] = [(v, t)]
-    replace (v1, t1) ((v2, t2) : cs)
-      | v1 == v2 = (v1, t1) : cs
-      | otherwise = (v2, t2) : replace (v1, t1) cs
-    aux :: Judgement -> Derivation
-    aux (c, Variable v, At "") = Axiom (c, Variable v, At "")
-    aux (c, Lambda v t, At "")
-      | t == Variable v = Abstraction (c, Lambda v t, At "") (aux (replace (v, At "") c, t, At ""))
-      | otherwise = Abstraction (c, Lambda v t, At "") (aux ((v, At "") : c, t, At ""))
-    aux (c, Apply t1 t2, At "") = Application (c, Apply t1 t2, At "") (aux (c, t1, At "")) (aux (c, t2, At ""))
 
 derive1 :: Term -> Derivation
 derive1 = undefined
