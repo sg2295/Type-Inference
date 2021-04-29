@@ -279,16 +279,16 @@ instance Show Derivation where
 
 ------------------------- Assignment 5
 
-update :: (Var, Type) -> Context -> Context
-update (v, t) [] = [(v, t)]
-update (v1, t1) ((v2, t2) : cs)
+update :: (Var, Type) -> Context -> Context -- Update the context. (Add or update the occurence of (Var, Type) in the context)
+update (v, t) [] = [(v, t)] -- If we reached the end of the context list (not in the context) add it.
+update (v1, t1) ((v2, t2) : cs) -- If the pair (Var, Type) is in the context then update it.
   | v1 == v2 = (v1, t1) : cs
   | otherwise = (v2, t2) : update (v1, t1) cs
 
 derive0 :: Term -> Derivation
 derive0 t = aux (getCon (free t), t, At "")
   where
-    getCon :: [Var] -> Context -- Get the context of the term (Used once when aux is first called)
+    getCon :: [Var] -> Context -- Create a context using the list of Vars. (Used once when aux is first called)
     getCon [] = []
     getCon (v : vs) = (v, At "") : getCon vs
     aux :: Judgement -> Derivation
@@ -325,11 +325,29 @@ derive0 t = aux (getCon (free t), t, At "")
 --   | x == y = z
 --   | otherwise = find x zs
 
+odds :: [Atom] -> [Atom]
+odds (x : _ : xs) = x : odds xs
+
+evens :: [Atom] -> [Atom]
+evens (_ : x : xs) = x : evens xs
+
+discard :: [Atom] -> Int -> [Atom]
+discard as 0 = as
+discard (_ : as) x = discard as (x - 1)
+
 derive1 :: Term -> Derivation
-derive1 = undefined
+derive1 t = aux (discard atoms (length (free t))) (getCon (free t) atoms, t, At (head atoms))
   where
+    getCon :: [Var] -> [Atom] -> Context -- Get the context of the term (Used once when aux is first called)
+    getCon [] _ = []
+    getCon _ [] = error "Empty Atom list in getCon of derive1"
+    getCon (v : vs) (a : as) = (v, At a) : getCon vs as
     aux :: [Atom] -> Judgement -> Derivation
-    aux = undefined
+    aux (a : _) (c, Variable v, t) = Axiom (update (v, t) c, Variable v, At a)
+    aux (a1 : a2 : as) (c, Lambda v t, ty)
+      | t == Variable v = Abstraction (c, Lambda v t, At a1) (aux as (update (v, At a1) c, t, At a2))
+      | otherwise = Abstraction (c, Lambda v t, At a1) (aux as ((v, At a2) : c, t, At a2))
+    aux (a : as) (c, Apply t1 t2, ty) = Application (update (head (free t2), At a) c, Apply t1 t2, ty) (aux (odds as) (update (head (free t2), At a) c, t1, At a)) (aux (evens as) (c, t2, At a))
 
 upairs :: Derivation -> [Upair]
 upairs = undefined
