@@ -292,11 +292,45 @@ derive0 t = aux (getCon (free t), t, At "")
     getCon [] = []
     getCon (v : vs) = (v, At "") : getCon vs
     aux :: Judgement -> Derivation
-    aux (c, Variable v, At "") = Axiom (c, Variable v, At "")
-    aux (c, Lambda v t, At "")
-      | t == Variable v = Abstraction (c, Lambda v t, At "") (aux (update (v, At "") c, t, At ""))
-      | otherwise = Abstraction (c, Lambda v t, At "") (aux ((v, At "") : c, t, At ""))
-    aux (c, Apply t1 t2, At "") = Application (c, Apply t1 t2, At "") (aux (c, t1, At "")) (aux (c, t2, At ""))
+    aux (c, Variable v, _) = Axiom (c, Variable v, At "")
+    aux (c, Lambda v t, _) = Abstraction (c, Lambda v t, At "") (aux (update (v, At "") c, t, At ""))
+    aux (c, Apply t1 t2, _) = Application (c, Apply t1 t2, At "") (aux (c, t1, At "")) (aux (c, t2, At ""))
+
+odds :: [Atom] -> [Atom]
+odds (x : _ : xs) = x : odds xs
+
+evens :: [Atom] -> [Atom]
+evens (_ : x : xs) = x : evens xs
+
+discard :: [Atom] -> Int -> [Atom]
+discard as 0 = as
+discard (_ : as) x = discard as (x - 1)
+
+-- derive1 :: Term -> Derivation
+-- derive1 t = aux (discard atoms (length (free t))) (getCon (free t) atoms, t, At (head atoms))
+--   where
+--     getCon :: [Var] -> [Atom] -> Context -- Get the context of the term (Used once when aux is first called)
+--     getCon [] _ = []
+--     getCon _ [] = error "Empty Atom list in getCon of derive1"
+--     getCon (v : vs) (a : as) = (v, At a) : getCon vs as
+--     aux :: [Atom] -> Judgement -> Derivation
+--     aux (a : _) (c, Variable v, t) = Axiom (update (v, t) c, Variable v, At a)
+--     aux (a1 : a2 : as) (c, Lambda v t, ty) = Abstraction (c, Lambda v t, At a1) (aux as (update (v, At a2) c, t, At a2))
+--       -- | t == Variable v = Abstraction (c, Lambda v t, At a1) (aux as (update (v, At a1) c, t, At a2))
+--       -- | otherwise = Abstraction (c, Lambda v t, At a1) (aux as ((v, At a2) : c, t, At a2))
+--     aux (a : as) (c, Apply t1 t2, ty) = Application (update (head (free t2), At a) c, Apply t1 t2, ty) (aux (odds as) (update (head (free t2), At a) c, t1, At a)) (aux (evens as) (c, t2, At a))
+
+derive1 :: Term -> Derivation
+derive1 t = aux (discard atoms (length (free t))) (getCon (free t) atoms, t, At (head atoms))
+  where
+    getCon :: [Var] -> [Atom] -> Context -- Get the context of the term (Used once when aux is first called)
+    getCon [] _ = []
+    getCon _ [] = error "Empty Atom list in getCon of derive1"
+    getCon (v : vs) (a : as) = (v, At a) : getCon vs as
+    aux :: [Atom] -> Judgement -> Derivation
+    aux (a : _) (c, Variable v, _) = Axiom (c, Variable v, At a)
+    aux (a1 : a2 : as) (c, Lambda v t, _) = Abstraction (c, Lambda v t, At a1) (aux as (update (v, At a2) c, t, At a2))
+    aux (a : as) (c, Apply t1 t2, _) = Application (c, Apply t1 t2, At a) (aux (odds as) (c, t1, At a)) (aux (evens as) (c, t2, At a))
 
 -- Type definitions:
 -- State = ([Sub], [Upair])
@@ -324,30 +358,6 @@ derive0 t = aux (getCon (free t), t, At "")
 -- find x ((y, z) : zs)
 --   | x == y = z
 --   | otherwise = find x zs
-
-odds :: [Atom] -> [Atom]
-odds (x : _ : xs) = x : odds xs
-
-evens :: [Atom] -> [Atom]
-evens (_ : x : xs) = x : evens xs
-
-discard :: [Atom] -> Int -> [Atom]
-discard as 0 = as
-discard (_ : as) x = discard as (x - 1)
-
-derive1 :: Term -> Derivation
-derive1 t = aux (discard atoms (length (free t))) (getCon (free t) atoms, t, At (head atoms))
-  where
-    getCon :: [Var] -> [Atom] -> Context -- Get the context of the term (Used once when aux is first called)
-    getCon [] _ = []
-    getCon _ [] = error "Empty Atom list in getCon of derive1"
-    getCon (v : vs) (a : as) = (v, At a) : getCon vs as
-    aux :: [Atom] -> Judgement -> Derivation
-    aux (a : _) (c, Variable v, t) = Axiom (update (v, t) c, Variable v, At a)
-    aux (a1 : a2 : as) (c, Lambda v t, ty)
-      | t == Variable v = Abstraction (c, Lambda v t, At a1) (aux as (update (v, At a1) c, t, At a2))
-      | otherwise = Abstraction (c, Lambda v t, At a1) (aux as ((v, At a2) : c, t, At a2))
-    aux (a : as) (c, Apply t1 t2, ty) = Application (update (head (free t2), At a) c, Apply t1 t2, ty) (aux (odds as) (update (head (free t2), At a) c, t1, At a)) (aux (evens as) (c, t2, At a))
 
 upairs :: Derivation -> [Upair]
 upairs = undefined
