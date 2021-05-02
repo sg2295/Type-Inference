@@ -296,18 +296,8 @@ derive0 t = aux (getCon (free t), t, At "")
     aux (c, Lambda v t, _) = Abstraction (c, Lambda v t, At "") (aux (update (v, At "") c, t, At ""))
     aux (c, Apply t1 t2, _) = Application (c, Apply t1 t2, At "") (aux (c, t1, At "")) (aux (c, t2, At ""))
 
-odds :: [Atom] -> [Atom]
-odds (x : _ : xs) = x : odds xs
-
-evens :: [Atom] -> [Atom]
-evens (_ : x : xs) = x : evens xs
-
-discard :: [Atom] -> Int -> [Atom]
-discard as 0 = as
-discard (_ : as) x = discard as (x - 1)
-
 derive1 :: Term -> Derivation
-derive1 t = aux (discard atoms (length (free t))) (getCon (free t) atoms, t, At (head atoms))
+derive1 t = aux (tail atoms) (getCon (free t) atoms, t, At (head atoms))
   where
     getCon :: [Var] -> [Atom] -> Context -- Get the context of the term (Used once when aux is first called)
     getCon [] _ = []
@@ -317,28 +307,10 @@ derive1 t = aux (discard atoms (length (free t))) (getCon (free t) atoms, t, At 
     aux (a : _) (c, Variable v, _) = Axiom (c, Variable v, At a)
     aux (a1 : a2 : as) (c, Lambda v t, _) = Abstraction (c, Lambda v t, At a1) (aux as (update (v, At a2) c, t, At a2))
     aux (a : as) (c, Apply t1 t2, _) = Application (c, Apply t1 t2, At a) (aux (odds as) (c, t1, At a)) (aux (evens as) (c, t2, At a))
-
--- Type definitions:
--- State = ([Sub], [Upair])
--- Sub = (Atom, Type)
--- Upair = (Type, Type)
--- type Context = [(Var, Type)]
--- type Judgement = (Context, Term, Type)
--- data Derivation
---   = Axiom Judgement
---   | Abstraction Judgement Derivation
---   | Application Judgement Derivation Derivation
--- data Term
---   = Variable Var = String
---   | Lambda Var Term
---   | Apply Term Term
--- n1 = Apply (Lambda "x" (Variable "x")) (Variable "y")
-
--- find :: (Show a, Eq a) => a -> [(a, b)] -> b
--- find x [] = error ("find: " ++ show x ++ " not found")
--- find x ((y, z) : zs)
---   | x == y = z
---   | otherwise = find x zs
+    odds :: [Atom] -> [Atom]
+    odds (x : _ : xs) = x : odds xs -- Get the odd elements of the list
+    evens :: [Atom] -> [Atom]
+    evens (_ : x : xs) = x : evens xs -- Get the even elements of the list
 
 getContext :: Judgement -> Context
 getContext (c, _, _) = c
@@ -352,4 +324,4 @@ upairs (Abstraction (c, Lambda v _, t) d) = (t, find v (getContext (conclusion d
 upairs (Application (c, _, t) d1 d2) = (getType (conclusion d1), getType (conclusion d2) :-> t) : upairs d1 ++ upairs d2
 
 derive :: Term -> Derivation
-derive = undefined
+derive t = subs_der (unify (upairs (derive1 t))) (derive1 t)
