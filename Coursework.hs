@@ -90,7 +90,7 @@ findAtoms xs = sortList (listAtoms xs [])
   where
     listAtoms :: Type -> [Atom] -> [Atom]
     listAtoms (x :-> xs) y = listAtoms x y ++ listAtoms xs y
-    listAtoms (At x) y = [x]
+    listAtoms (At x) _ = [x]
     sortList :: [Atom] -> [Atom]
     sortList [] = []
     sortList (x : xs) = insertToList x (sortList xs) -- Recursively sort the tail
@@ -306,20 +306,6 @@ discard :: [Atom] -> Int -> [Atom]
 discard as 0 = as
 discard (_ : as) x = discard as (x - 1)
 
--- derive1 :: Term -> Derivation
--- derive1 t = aux (discard atoms (length (free t))) (getCon (free t) atoms, t, At (head atoms))
---   where
---     getCon :: [Var] -> [Atom] -> Context -- Get the context of the term (Used once when aux is first called)
---     getCon [] _ = []
---     getCon _ [] = error "Empty Atom list in getCon of derive1"
---     getCon (v : vs) (a : as) = (v, At a) : getCon vs as
---     aux :: [Atom] -> Judgement -> Derivation
---     aux (a : _) (c, Variable v, t) = Axiom (update (v, t) c, Variable v, At a)
---     aux (a1 : a2 : as) (c, Lambda v t, ty) = Abstraction (c, Lambda v t, At a1) (aux as (update (v, At a2) c, t, At a2))
---       -- | t == Variable v = Abstraction (c, Lambda v t, At a1) (aux as (update (v, At a1) c, t, At a2))
---       -- | otherwise = Abstraction (c, Lambda v t, At a1) (aux as ((v, At a2) : c, t, At a2))
---     aux (a : as) (c, Apply t1 t2, ty) = Application (update (head (free t2), At a) c, Apply t1 t2, ty) (aux (odds as) (update (head (free t2), At a) c, t1, At a)) (aux (evens as) (c, t2, At a))
-
 derive1 :: Term -> Derivation
 derive1 t = aux (discard atoms (length (free t))) (getCon (free t) atoms, t, At (head atoms))
   where
@@ -348,19 +334,22 @@ derive1 t = aux (discard atoms (length (free t))) (getCon (free t) atoms, t, At 
 --   | Apply Term Term
 -- n1 = Apply (Lambda "x" (Variable "x")) (Variable "y")
 
--- free :: Term -> [Var]
--- free (Variable x) = [x]
--- free (Lambda x n) = free n `minus` [x]
--- free (Apply n m) = free n `merge` free m
-
 -- find :: (Show a, Eq a) => a -> [(a, b)] -> b
 -- find x [] = error ("find: " ++ show x ++ " not found")
 -- find x ((y, z) : zs)
 --   | x == y = z
 --   | otherwise = find x zs
 
+getContext :: Judgement -> Context
+getContext (c, _, _) = c
+
+getType :: Judgement -> Type
+getType (_, _, t) = t
+
 upairs :: Derivation -> [Upair]
-upairs = undefined
+upairs (Axiom (c, Variable v, t)) = [(t, find v c)]
+upairs (Abstraction (c, Lambda v _, t) d) = (t, find v (getContext (conclusion d)) :-> getType (conclusion d)) : upairs d
+upairs (Application (c, _, t) d1 d2) = (getType (conclusion d1), getType (conclusion d2) :-> t) : upairs d1 ++ upairs d2
 
 derive :: Term -> Derivation
 derive = undefined
