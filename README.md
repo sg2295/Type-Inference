@@ -1,1 +1,1 @@
-# functional-programming
+# Type Inference
