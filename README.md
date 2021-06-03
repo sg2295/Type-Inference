@@ -1,5 +1,5 @@
 ## Type Inference
-Type inference is the process of finding a type for a lambda-term. This project is an implementation of a simple and transparent version of Type Inference. The project can be broken down into four distinct sub-parts: _Types with variables, Substitutions, Unification, _and_ Derivations_ each discussed further below.
+Type inference is the process of finding a type for a lambda-term. This project is an implementation of a simple and transparent version of Type Inference. The project can be broken down into five distinct sub-parts: _Types with variables, Substitutions, Unification, Derivations _and_ Type Inference_, each discussed further below.
 
 ### Types with variables
 Types can be defined by the grammar: 
