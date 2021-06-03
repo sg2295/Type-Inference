@@ -29,3 +29,23 @@ Substitutions for types is simpler than substitutions for lambda-terms, since va
 </i></p>
 
 A series of substitutions is abbreviated by _S_:
+
+<p align="center"> <i>
+  S = [τ<sub>1</sub>/α<sub>1</sub>]...[τ<sub>n</sub>/α<sub>n</sub>]
+</i></p>
+
+And _ε_ is the **empty** series of substitutions. _τ[S]_ is _τ_ with the substitution _S_ applied to it. So we have _τ[ε] = τ_. Using the above definition of _S_, we have:
+
+<p align="center"> <i>
+  τ[S] = τ[τ<sub>1</sub>/α<sub>1</sub>]...[τ<sub>n</sub>/α<sub>n</sub>]
+</i></p>
+
+Therefore a substitution _[τ/α]_ can be written as a pair `(a,t)` where *a* is an `Atom` and *t* is a `Type`. Then a series of substitutions is a list of pairs:
+
+_τ[S] = τ[τ<sub>1</sub>/α<sub>1</sub>]...[τ<sub>n</sub>/α<sub>n</sub>]_ 
+
+`[(an, tn), ..., (a1, t1)]`
+ 
+ > Note that the order is reversed 
+
+To deal with substitutions, the `sub` function applies a substitution to a given type and `subs` applies a list of substitutions to a type, applying the head of the list last and the tail first.
